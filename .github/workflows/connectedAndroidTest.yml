@@ -1,0 +1,45 @@
+name: Android test
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Prepare NDK dir for caching ( workaround for https://github.com/actions/virtual-environments/issues/1337 )
+        run: |
+          sudo mkdir -p /usr/local/lib/android/sdk/ndk
+          sudo chmod -R 777 /usr/local/lib/android/sdk/ndk
+          sudo chown -R $USER:$USER /usr/local/lib/android/sdk/ndk
+
+      - name: install NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25b
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.7.12"
+          channel: 'stable'
+
+      - name: Get dependencies
+        working-directory: ostorlab_insecure_flutter_app
+        run: flutter pub get
+
+      - name: Start AAR build
+        working-directory: ostorlab_insecure_flutter_app
+        run: flutter build aar --no-sound-null-safety
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2.4.2
+        with:
+          arguments: test
+          gradle-version: 7.3.3
